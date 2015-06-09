@@ -1,0 +1,16 @@
+<ion-view hide-nav-bar="false" view-title="Users">
+  <ion-content class="has-header" has-header="true">
+    <ion-list>
+      <ion-item class="item-remove-animate item-avatar item-icon-right" ng-repeat="user in users" type="item-text-wrap" href="#/tab/users/{{user.id}}">
+        <img ng-src="img/{{user.image}}">
+        <h2>{{user.displayName}}</h2>
+        <p>Zone: {{user.zone}}</p>
+        <i class="icon ion-chevron-right icon-accessory"></i>
+    </ion-list>
+    <ion-list ng-hide="users.length">
+        <ion-item class="textCenter">
+            <i class="icon ion-loading-c"></i> Loading Users
+        </ion-item>
+    </ion-list>
+  </ion-content>
+</ion-view>
