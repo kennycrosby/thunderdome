@@ -10,7 +10,10 @@ angular.module('mychat.services', ['firebase'])
   return {
     scan : function(userRef) {
 
-      var zone = 0;
+      var zone = 0,
+          count = 0,
+          sample = [],
+          sampleRate = 7;
 
       // Start scanning.
       estimote.beacons.startEstimoteBeaconsDiscoveryForRegion(
@@ -25,31 +28,48 @@ angular.module('mychat.services', ['firebase'])
           // Closest Beacon
           var closestMajor = beaconInfo.beacons[0].major;
 
-          // Zone 1 : 39199, 44239
-          // Zone 2 : 48980
-          // Zone 3 : 38523, 5356
-          switch (closestMajor) {
-            case 44239:
-            case 39199:
-              zone = 1;
-              break;
-            case 48980:
-              zone = 2;
-              break;
-            case 38523:
-            case 5356:
-              zone = 3;
-              break;  
-          }
+          console.log('count', count);
+          console.log('sample', sample);
 
-          // Set the Zone for that user
-          userRef.child('zone').set(zone);
+          if (count <= sampleRate) {
+            count++;
+            // Zone 1 : 39199, 44239
+            // Zone 2 : 48980
+            // Zone 3 : 38523, 5356
+            switch (closestMajor) {
+              case 44239:
+              case 39199:
+                sample.push(1);
+                break;
+              case 48980:
+                sample.push(2);
+                break;
+              case 38523:
+              case 5356:
+                sample.push(3);
+                break;
+            }
+          } else {
+            var zone = mode(sample);
+
+            console.log('zone', zone);
+            console.log('zonetype', typeof zone);
+
+            if (typeof zone === 'number') {
+              // Set the Zone for that user
+              userRef.child('zone').set(zone);
+            };
+
+            count = 0;
+            sample = [];
+          }
+          
           //userRef.child('lastSeen').set(Date.now());
 
         },
         //onError
         function(errorMessage){
-
+          console.log(errorMessage);
         });
     }
   }
@@ -108,11 +128,8 @@ angular.module('mychat.services', ['firebase'])
   return {
     onRange : function(beaconInfo) {
 
-      var unlocked = false;
       //  If we can get beacons show the locked screen
-      if (!beaconInfo) {
-        return 'notInRange';
-      }
+      if (!beaconInfo) { return 'notInRange'; }
 
       // Sort beacons by distance.
       beaconInfo.beacons.sort(function(beacon1, beacon2) {
@@ -120,32 +137,28 @@ angular.module('mychat.services', ['firebase'])
 
       // Closest Beacon
       var closest = beaconInfo.beacons[0];
-      if(closest.major === 11828 && closest.proximity === 1) {
-        console.log('WE HAVE A MATCH OPEN THE DOOR');
-        //  We got the correct beacon and proximity is immediate
-        unlocked = true;
-        return unlocked;
-      } else {
-        unlocked = false;
-        return unlocked;
-      }
+      return closest.major === 11828 && closest.proximity === 1;
     
     },
+
     onError : function(errorMessage) {
       console.log('Range error: ' + errorMessage);
     },
-    unlockAnimation : function() {
+    unlockAnimation : function(callback) {
 
-      // $('.loader').removeClass('animate');
+      $('.three').one('webkitAnimationEnd', callback);
+
+      $('.loader').removeClass('animate');
       var el     = $('.loader'),  
         newone = el.clone(true);     
       el.before(newone);
       $(".loader:last").remove();
       $(document.body).find('.loader').addClass('animate');
 
-      setTimeout(function() {
-        $state.go('tab.users');
-      }, 2000);
+    },
+    stopRangingBeacons : function() {
+      console.log('stopped ranging');
+      estimote.beacons.stopRangingBeaconsInRegion({});
     }
   }
 })
@@ -182,37 +195,33 @@ angular.module('mychat.services', ['firebase'])
 
       for (var key in users) {
         if (users.hasOwnProperty(key)) {
-          console.log(users[key]);
-          if (users[key].zone === 0) {
-            zones[0].push(users[key]);
-          };
-
-          if (users[key].zone === 1) {
-            zones[1].push(users[key]);
-          };
-
-          if (users[key].zone === 2) {
-            zones[2].push(users[key]);
-          };
-
-          if (users[key].zone === 3) {
-            zones[3].push(users[key]);
-          };
-
-          if (users[key].zone === 4) {
-            zones[4].push(users[key]);
-          };
-
-          if (users[key].zone === 5) {
-            zones[5].push(users[key]);
-          };
+          zones[users[key].zone].push(users[key]);
         }
       }
-
       return zones;     
-
     }
   }
-
 });
 
+
+function mode(array)
+{
+    if(array.length == 0)
+      return null;
+    var modeMap = {};
+    var maxEl = array[0], maxCount = 1;
+    for(var i = 0; i < array.length; i++)
+    {
+      var el = array[i];
+      if(modeMap[el] == null)
+        modeMap[el] = 1;
+      else
+        modeMap[el]++;  
+      if(modeMap[el] > maxCount)
+      {
+        maxEl = el;
+        maxCount = modeMap[el];
+      }
+    }
+    return maxEl;
+}

@@ -33,6 +33,29 @@ img.logo {
 	}
 }
 
+.welcome {
+  h1,h2, h3 {
+    text-align: center;
+    font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif; 
+    font-weight: 300;
+  }
+
+  button {
+    margin: 20px auto;
+    display: block;
+
+  }
+  img {
+    max-width: 165px;
+    max-height: 165px;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    display: block;
+    margin: 0 auto;
+  }
+}
+
 .map-view {
 	background: url(../img/map.png) no-repeat center center;
 	min-height: 330px;

@@ -71,23 +71,19 @@ angular.module('mychat.controllers', [])
           userRef = new Firebase($scope.firebaseUrl + 'users/' + authData.uid);
           userRef.child('lastSeen').set(Date.now());
 
-          // SETTING THE ZONE
+          // START SCANNING AND SET THE ZONE FOR THIS USER
           Zones.scan(userRef);
 
           ref.child("users").child(authData.uid).once('value', function (snapshot) {
               var val = snapshot.val();
-              console.log('val', val);
-              // To Update AngularJS $scope either use $apply or $timeout
-              $scope.$apply(function () {
-                  $rootScope.displayName = val;
 
-              });
-
+              // Go to either the lock page or the users page
               if (val.unlocked) {
                 $state.go('tab.users');  
               } else {
                 $state.go('unlock');  
               }
+
               $ionicLoading.hide();
           });
           
@@ -127,7 +123,7 @@ angular.module('mychat.controllers', [])
   
   $scope.zones = {};
 
-  var usersRef = new Firebase('https://intense-torch-5728.firebaseio.com/users/');
+  var usersRef = new Firebase($scope.firebaseUrl + 'users/');
 
   usersRef.on('value', function(snap) {
       var users = snap.val();
@@ -143,19 +139,24 @@ angular.module('mychat.controllers', [])
   
 })
 
-.controller('UnlockCtrl', function ($scope, Unlock, $state, $rootScope) {
+.controller('UnlockCtrl', function ($scope, Unlock, $state, $rootScope, $ionicModal) {
 
-  $scope.animate = function() {
+  $scope.user = $rootScope.currUser;
 
-    var el     = $('.loader'),  
-        newone = el.clone(true);     
-    el.before(newone);
-    $(".loader:last").remove();
-    $(document.body).find('.loader').addClass('animate');     
+  $ionicModal.fromTemplateUrl('templates/welcome.html', {
+    scope: $scope
+  }).then(function (modal) {
+    $scope.modal = modal;
+  });
 
+  $scope.continue = function() {
+    $scope.modal.hide();
+    $state.go('tab.users');
   }
 
-  var counter = 0;
+  $scope.unlockit = function() {
+    Unlock.unlockAnimation(function(){$scope.modal.show();});
+  }
 
   // The Default data
   $scope.unlockData = {
@@ -187,27 +188,25 @@ angular.module('mychat.controllers', [])
         $scope.$apply();
 
       } else if (unlocked) {
+
+        // Stop Ranging for Beacons
+        Unlock.stopRangingBeacons();
+
         $scope.unlockData = {
           doorStatus : 'Unlocked',
           directions : 'The door has been unlocked go inside and make yourself a sandwich.',
           image: 'unlocked.svg'
         };
-        $scope.$apply();
-
-        // Stop Ranging for Beacons
-        utils.stopRangingBeacons();
-
+        
         $rootScope.userRef.child('unlocked').set(true);
+        $rootScope.userRef.child('locationCount').once('value', function(snap) {
+          var locationcount = snap.val();
+          console.log('locationCount', ++locationcount);
+          $rootScope.userRef.child('locationCount').set(locationcount++);
+          $scope.$apply();
+        });
 
-        // Location count + 1
-        //$rootScope.userRef.child('locationCount').set(true);
-
-        Unlock.unlockAnimation();
-        setTimeout(function() {
-          $state.go('tab.users');
-        }, 2000);
-
-        console.log('Stopped Ranging for beacons');
+        Unlock.unlockAnimation(function(){$scope.modal.show();});
 
       } else {
         $scope.unlockData = {
@@ -221,6 +220,7 @@ angular.module('mychat.controllers', [])
       }
 
     },
+
     Unlock.onError );
 
 })
