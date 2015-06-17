@@ -6,14 +6,13 @@ angular.module('mychat.services', ['firebase'])
 }])
 
 .factory('Zones', function() {
-
   return {
     zonesObj : {
       1 : [ 39199, 44239, 47979 ], //zone 1 beacons major
-      2 : [ 49839, 17343 ], //zone 2 beacons major
-      3 : [ 38523, 5356, 11828 ], // the unlock is 11828
-      4 : [ 48980, 8986 ], //zone 3 beacons major
-      5 : [ 27715, 20669 ] //zone 4 beacons major
+      2 : [ 49839, 17343 ],        //zone 2 beacons major
+      3 : [ 38523, 5356, 11828 ],  //zone 3 beacons major the unlock is 11828
+      4 : [ 48980, 8986 ],         //zone 4 beacons major
+      5 : [ 27715, 20669 ]         //zone 5 beacons major
     },
     scan : function(userRef) {
 
@@ -69,10 +68,7 @@ angular.module('mychat.services', ['firebase'])
             // Add the zone to the zone sample we are taking
             for (var key in self.zonesObj) {
               if (self.zonesObj.hasOwnProperty(key)) {
-                // console.log('key', key);
-                // console.log('self.zonesObj[key]', self.zonesObj[key]);
                 for (var i = self.zonesObj[key].length - 1; i >= 0; i--) {
-                  //console.log('self.zonesObj[key][i]',self.zonesObj[key][i]);
                   if (closestMajor === self.zonesObj[key][i]) {
                     console.log('match', key);
                     sample.push(key);
@@ -190,7 +186,7 @@ angular.module('mychat.services', ['firebase'])
           zones[users[key].zone].push(users[key]);
         }
       }
-      return zones;     
+      return zones;
     }
   }
 });

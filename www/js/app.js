@@ -140,10 +140,9 @@ angular.module('mychat', [
       // Auth refers to our $firebaseAuth wrapper in the example above
       "currentAuth": ["Auth",
           function (Auth) {
-
-              // $requireAuth returns a promise so the resolve waits for it to complete
-              // If the promise is rejected, it will throw a $stateChangeError (see above)
-              return Auth.$requireAuth();
+            // $requireAuth returns a promise so the resolve waits for it to complete
+            // If the promise is rejected, it will throw a $stateChangeError (see above)
+            return Auth.$requireAuth();
           }]
     }
   })
@@ -177,17 +176,6 @@ angular.module('mychat', [
       }
     }
   })
-
-  // Each tab has its own nav history stack:
-  // .state('tab.chat', {
-  //   url: '/chat',
-  //   views: {
-  //     'tab-chat': {
-  //       templateUrl: 'templates/tab-chat.html',
-  //       controller: 'ChatCtrl'
-  //     }
-  //   }
-  // })
 
   // if none of the above states are matched, use this as the fallback
   $urlRouterProvider.otherwise('/login');
