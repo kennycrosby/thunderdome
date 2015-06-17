@@ -40,14 +40,12 @@ angular.module('mychat', [
       }
     }, 300);
 
-    // if ($window.StatusBar) {
-    //   StatusBar.styleDefault();
-    // }
-
     // To Resolve Bug
     ionic.Platform.fullScreen();
 
     $rootScope.firebaseUrl = firebaseUrl;
+    $rootScope.displayName = null;
+    $rootScope.userRef = null;
     
     // Reference to firebase
     var ref = new Firebase(firebaseUrl);
@@ -60,6 +58,8 @@ angular.module('mychat', [
           ref.child("users").child(authData.uid).once('value', function (snapshot) {
               var val = snapshot.val();
               $rootScope.currUser = val;
+              $rootScope.displayName = val;
+              $rootScope.unlocked = val.unlocked;
           });
 
       } else {
@@ -148,17 +148,6 @@ angular.module('mychat', [
     }
   })
 
-  // Each tab has its own nav history stack:
-  .state('tab.chat', {
-    url: '/chat',
-    views: {
-      'tab-chat': {
-        templateUrl: 'templates/tab-chat.html',
-        controller: 'ChatCtrl'
-      }
-    }
-  })
-
   .state('tab.map', {
     url: '/map',
     views: {
@@ -188,6 +177,17 @@ angular.module('mychat', [
       }
     }
   })
+
+  // Each tab has its own nav history stack:
+  // .state('tab.chat', {
+  //   url: '/chat',
+  //   views: {
+  //     'tab-chat': {
+  //       templateUrl: 'templates/tab-chat.html',
+  //       controller: 'ChatCtrl'
+  //     }
+  //   }
+  // })
 
   // if none of the above states are matched, use this as the fallback
   $urlRouterProvider.otherwise('/login');

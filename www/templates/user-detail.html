@@ -11,18 +11,22 @@
         <img ng-src="img/{{user.image}}">
         <h2><span class="subdued">Username:</span> {{user.displayName}}</h2>
         <p><span class="subdued">Email:</span> {{user.email}}</p>
-        
       </div>
-
       <div class="item item-body">
-        <p>Last Seen: {{user.lastSeen | date:'short' }}</p>
-        <p class="subdued">
-          Zone: {{user.zone}}
-        </p>
-        
-        <p>Unlocked? {{user.unlocked | yesNo}}</p>
 
-        <p>Times checked into this location: {{user.locationCount}}</p>
+        <h3>Zone: {{user.zone}}</h3>
+        
+        <!-- Show checked in at if the user has unlocked -->
+        <div ng-show="user.unlocked">
+          <p>Checked in at: {{user.lastSeen | date:'short' }}</p>
+        </div>
+
+        <!-- Show checked out at if the user has left the perimiter -->
+        <div ng-hide="user.unlocked">
+          <p>Left mod at: {{user.lastSeen | date:'short' }}</p>
+        </div>
+
+        <p>{{user.displayName}} has been to mod {{user.locationCount}} times.</p>
       </div>
 
     </div>

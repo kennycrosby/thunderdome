@@ -8,18 +8,54 @@ angular.module('mychat.services', ['firebase'])
 .factory('Zones', function() {
 
   return {
+    zonesObj : {
+      1 : [ 39199, 44239, 47979 ], //zone 1 beacons major
+      2 : [ 49839, 17343 ], //zone 2 beacons major
+      3 : [ 38523, 5356, 11828 ], // the unlock is 11828
+      4 : [ 48980, 8986 ], //zone 3 beacons major
+      5 : [ 27715, 20669 ] //zone 4 beacons major
+    },
     scan : function(userRef) {
+
+      var self = this;
+
+      console.log('userRef',userRef);
 
       var zone = 0,
           count = 0,
           sample = [],
-          sampleRate = 7;
+          sampleRate = 5,
+          zeroCount = 0,
+          zeroRate = 15;
 
       // Start scanning.
       estimote.beacons.startEstimoteBeaconsDiscoveryForRegion(
-        {}, // Empty region matches all beacons.
+        {
+          'identifier': 'MyRegion',
+          'uuid': 'B9407F30-F5F8-466E-AFF9-25556B57FE6D'
+        }, // Empty region matches all beacons.
         //onScan
         function(beaconInfo) {
+
+          $('.debug').html(beaconInfo);
+
+          // Start recording that the person left
+          if (beaconInfo.beacons.length <= 1) { zeroCount++; };
+
+          // if I dont see any beacons for the selected rate then check the user out of the space
+          if (beaconInfo.beacons.length <= 1 && zeroCount >= zeroRate) {
+
+            // The person has left the building
+            userRef.child('zone').set(0);
+            userRef.child('lastSeen').set(Date.now());
+            userRef.child('unlocked').set(false);
+            zeroCount = 0;
+
+            //stop scanning
+            // self.stopScan();
+            // alert('You left mod so we checked you out, come back soon!');
+
+          };
 
           // Sort beacons by signal strength.
           beaconInfo.beacons.sort(function(beacon1, beacon2) {
@@ -28,98 +64,56 @@ angular.module('mychat.services', ['firebase'])
           // Closest Beacon
           var closestMajor = beaconInfo.beacons[0].major;
 
-          console.log('count', count);
-          console.log('sample', sample);
+          if ( count+1 <= sampleRate ) {
 
-          if (count <= sampleRate) {
-            count++;
-            // Zone 1 : 39199, 44239
-            // Zone 2 : 48980
-            // Zone 3 : 38523, 5356
-            switch (closestMajor) {
-              case 44239:
-              case 39199:
-                sample.push(1);
-                break;
-              case 48980:
-                sample.push(2);
-                break;
-              case 38523:
-              case 5356:
-                sample.push(3);
-                break;
+            // Add the zone to the zone sample we are taking
+            for (var key in self.zonesObj) {
+              if (self.zonesObj.hasOwnProperty(key)) {
+                // console.log('key', key);
+                // console.log('self.zonesObj[key]', self.zonesObj[key]);
+                for (var i = self.zonesObj[key].length - 1; i >= 0; i--) {
+                  //console.log('self.zonesObj[key][i]',self.zonesObj[key][i]);
+                  if (closestMajor === self.zonesObj[key][i]) {
+                    console.log('match', key);
+                    sample.push(key);
+                    count++;
+                  }; 
+                };
+              }
             }
+
           } else {
-            var zone = mode(sample);
 
-            console.log('zone', zone);
-            console.log('zonetype', typeof zone);
+            // get the most occuring zone and set the zone
+            var zone = utils.mode(sample);
 
-            if (typeof zone === 'number') {
+            if (typeof zone === 'number' && beaconInfo.beacons.length > 1) {
               // Set the Zone for that user
               userRef.child('zone').set(zone);
+              count = 0;
+              zeroCount = 0;
+              sample = [];
             };
 
-            count = 0;
-            sample = [];
           }
-          
-          //userRef.child('lastSeen').set(Date.now());
-
         },
         //onError
         function(errorMessage){
           console.log(errorMessage);
         });
+    },
+
+    stopScan : function() {
+      console.log('calling stopscan');
+      estimote.beacons.stopEstimoteBeaconDiscovery({
+        'identifier': 'MyRegion',
+        'uuid': 'B9407F30-F5F8-466E-AFF9-25556B57FE6D'
+      },
+      function() { // success
+        console.log('Successfully Stopped stopEstimoteBeaconDiscovery');
+      });
+
     }
-  }
-
-})
-
-.factory('Chats', function ($firebase) {
-
-  var selectedRoomId = 0;
-
-  var ref = new Firebase(firebaseUrl);
-  var chats;
-
-  return {
-      all: function () {
-        return chats;
-      },
-      remove: function (chat) {
-        chats.$remove(chat).then(function (ref) {
-          ref.key() === chat.$id; // true item has been removed
-        });
-      },
-      get: function (chatId) {
-        for (var i = 0; i < chats.length; i++) {
-          if (chats[i].id === parseInt(chatId)) {
-            return chats[i];
-          }
-        }
-        return null;
-      },
-      selectRoom: function (roomId) {
-        console.log("selecting the room with id: " + roomId);
-        selectedRoomId = roomId;
-        if (!isNaN(roomId)) {
-            chats = $firebase(ref.child('rooms').child(selectedRoomId).child('chats')).$asArray();
-        }
-      },
-      send: function (from, message) {
-        console.log("sending message from :" + from.displayName + " & message is " + message);
-        if (from && message) {
-            var chatMessage = {
-                from: from.displayName,
-                message: message,
-                createdAt: Firebase.ServerValue.TIMESTAMP
-            };
-            chats.$add(chatMessage).then(function (data) {
-                console.log("message added");
-            });
-        }
-      }
   }
 })
 
@@ -130,10 +124,6 @@ angular.module('mychat.services', ['firebase'])
 
       //  If we can get beacons show the locked screen
       if (!beaconInfo) { return 'notInRange'; }
-
-      // Sort beacons by distance.
-      beaconInfo.beacons.sort(function(beacon1, beacon2) {
-        return beacon1.distance > beacon2.distance; });
 
       // Closest Beacon
       var closest = beaconInfo.beacons[0];
@@ -146,6 +136,7 @@ angular.module('mychat.services', ['firebase'])
     },
     unlockAnimation : function(callback) {
 
+      // listen for animation callback
       $('.three').one('webkitAnimationEnd', callback);
 
       $('.loader').removeClass('animate');
@@ -158,7 +149,10 @@ angular.module('mychat.services', ['firebase'])
     },
     stopRangingBeacons : function() {
       console.log('stopped ranging');
-      estimote.beacons.stopRangingBeaconsInRegion({});
+      estimote.beacons.stopRangingBeaconsInRegion({
+        'identifier': 'UnlockRegion',
+        'uuid': '98F54863-C26C-F60F-C380-44B12D451FD7'
+      });
     }
   }
 })
@@ -190,9 +184,7 @@ angular.module('mychat.services', ['firebase'])
 .factory('MapZones', function ($firebase) {
   return {
     getZones: function(users) {
-
       var zones = { 0:[], 1:[], 2:[], 3:[], 4:[], 5:[] };
-
       for (var key in users) {
         if (users.hasOwnProperty(key)) {
           zones[users[key].zone].push(users[key]);
@@ -202,26 +194,3 @@ angular.module('mychat.services', ['firebase'])
     }
   }
 });
-
-
-function mode(array)
-{
-    if(array.length == 0)
-      return null;
-    var modeMap = {};
-    var maxEl = array[0], maxCount = 1;
-    for(var i = 0; i < array.length; i++)
-    {
-      var el = array[i];
-      if(modeMap[el] == null)
-        modeMap[el] = 1;
-      else
-        modeMap[el]++;  
-      if(modeMap[el] > maxCount)
-      {
-        maxEl = el;
-        maxCount = modeMap[el];
-      }
-    }
-    return maxEl;
-}

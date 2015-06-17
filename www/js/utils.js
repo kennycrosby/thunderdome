@@ -1,86 +1,74 @@
 var utils = utils || {
 
-  userID : 0,
-
-  beaconColorStyles : [
-    'style-color-unknown style-color-unknown-text',
-    'style-color-mint style-color-mint-text',
-    'style-color-ice style-color-ice-text',
-    'style-color-blueberry-dark style-color-blueberry-dark-text',
-    'style-color-white style-color-white-text',
-    'style-color-transparent style-color-transparent-text'],
-
-  proximityNames : [
-      'unknown',
-      'immediate',
-      'near',
-      'far'],
-
-  formatDistance : function(meters) {
-    if (!meters) { return 'Unknown'; }
-
-    if (meters > 1) {
-      return meters.toFixed(3) + ' m';
-    } else {
-      return (meters * 100).toFixed(3) + ' cm';
+  guid : function() {
+    function s4() {
+      return Math.floor((1 + Math.random()) * 0x10000)
+        .toString(16)
+        .substring(1);
     }
-
+    return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
+      s4() + '-' + s4() + s4() + s4();
   },
 
-  formatProximity : function(proximity) {
-    
-    if (!proximity) { return 'Unknown'; }
-
-    // Eliminate bad values (just in case).
-    proximity = Math.max(0, proximity);
-    proximity = Math.min(3, proximity);
-
-    // Return name for proximity.
-    return utils.proximityNames[proximity];
-
+  mode : function(array){
+      if(array.length == 0)
+        return null;
+      var modeMap = {};
+      var maxEl = array[0], maxCount = 1;
+      for(var i = 0; i < array.length; i++)
+      {
+        var el = array[i];
+        if(modeMap[el] == null)
+          modeMap[el] = 1;
+        else
+          modeMap[el]++;  
+        if(modeMap[el] > maxCount)
+        {
+          maxEl = el;
+          maxCount = modeMap[el];
+        }
+      }
+      return parseInt(maxEl);
   },
+  poll : function(fn, callback, errback, timeout, interval) {
 
-  beaconColorStyle : function(color) {
-    if (!color) {
-      color = 0;
-    }
+    var endTime = Number(new Date()) + (timeout || 2000);
+    interval = interval || 100;
 
-    // Eliminate bad values (just in case).
-    color = Math.max(0, color);
-    color = Math.min(5, color);
-
-    // Return style class for color.
-    return utils.beaconColorStyles[color];
-  },
-
-  stopRangingBeacons : function() {
-    
-    console.log('stopped ranging');
-    estimote.beacons.stopRangingBeaconsInRegion({});
-  },
-
-  createBeaconHTML : function(beacon) {
-    var colorClasses = utils.beaconColorStyle(beacon.color);
-    var htm = '<div class="item ' + colorClasses + '">'
-      + '<table><tr><td>Major</td><td>' + beacon.major
-      + '</td></tr><tr><td>Minor</td><td>' + beacon.minor
-      + '</td></tr><tr><td>RSSI</td><td>' + beacon.rssi
-    if (beacon.proximity)
-    {
-      htm += '</td></tr><tr><td>Proximity</td><td>'
-        + utils.formatProximity(beacon.proximity)
-    }
-    if (beacon.distance)
-    {
-      htm += '</td></tr><tr><td>Distance</td><td>'
-        + utils.formatDistance(beacon.distance)
-    }
-    htm += '</td></tr></table></div>';
-    return htm;
+    (function p() {
+      // If the condition is met, we're done! 
+      if(fn()) {
+          callback();
+      }
+      // If the condition isn't met but the timeout hasn't elapsed, go again
+      else if (Number(new Date()) < endTime) {
+          setTimeout(p, interval);
+      }
+      // Didn't match and too much time, reject!
+      else {
+          errback(new Error('timed out for ' + fn + ': ' + arguments));
+      }
+    })();
   }
-
-
 };
+
+
+
+// Usage:  ensure element is visible
+utils.poll(
+  function() {
+      return document.getElementById('lightbox').offsetWidth > 0;
+      console.log('polling');
+  },
+  function() {
+      // Done, success callback
+  },
+  function() {
+      // Error, failure callback
+  },
+  500000,
+  5000
+);
 
 
 

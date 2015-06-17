@@ -7711,6 +7711,11 @@ img.logo {
   display: block;
   margin: 0 auto; }
 
+.map img.here {
+  border: 2px solid green; }
+.map img.nothere {
+  border: 2px solid red; }
+
 .map-view {
   background: url(../img/map.png) no-repeat center center;
   min-height: 330px; }
@@ -7728,7 +7733,12 @@ img.logo {
     height: 100px; }
   .map-view .row .col > div {
     float: left;
-    margin: 5px 3px; }
+    width: 35px;
+    height: 35px;
+    margin: 2px 2px; }
+    .map-view .row .col > div a {
+      height: 35px;
+      display: block; }
 
 .unlock {
   background: #000000; }

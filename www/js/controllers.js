@@ -39,7 +39,7 @@ angular.module('mychat.controllers', [])
               displayName: user.displayname,
               image : "defaultuser.jpg",
               zone : 0,
-              id : guid(),
+              id : utils.guid(),
               lastSeen: Date.now(),
               unlocked: false,
               locationCount: 0
@@ -67,19 +67,23 @@ angular.module('mychat.controllers', [])
             password: user.pwdForLogin
         }).then(function (authData) {
 
-          // update the last time they logged in
-          userRef = new Firebase($scope.firebaseUrl + 'users/' + authData.uid);
-          userRef.child('lastSeen').set(Date.now());
+          // // update the last time they logged in
+          $rootScope.userRef = new Firebase($scope.firebaseUrl + 'users/' + authData.uid);
+          // //userRef.child('checkedIn').set(Date.now());
 
-          // START SCANNING AND SET THE ZONE FOR THIS USER
-          Zones.scan(userRef);
+          // // START SCANNING AND SET THE ZONE FOR THIS USER
+          // Zones.scan(userRef);
 
           ref.child("users").child(authData.uid).once('value', function (snapshot) {
               var val = snapshot.val();
 
+              $scope.$apply(function () {
+                $rootScope.displayName = val;
+              });
+
               // Go to either the lock page or the users page
               if (val.unlocked) {
-                $state.go('tab.users');  
+                $state.go('tab.map');  
               } else {
                 $state.go('unlock');  
               }
@@ -98,38 +102,18 @@ angular.module('mychat.controllers', [])
 
 })
 
-.controller('ChatCtrl', function ($scope, Chats, Users, $state) {
-  //console.log("Chat Controller initialized");
-
-  $scope.IM = {
-    textMessage: ""
-  };
-
-  Chats.selectRoom(0);
-  $scope.chats = Chats.all();
-
-  $scope.sendMessage = function (msg) {
-    Chats.send($scope.displayName, msg);
-    $scope.IM.textMessage = "";
-  }
-
-  $scope.remove = function (chat) {
-    Chats.remove(chat);
-  }
-
-})
-
 .controller('MapCtrl', function ($scope, MapZones, $state, Users) {
   
   $scope.zones = {};
-
   var usersRef = new Firebase($scope.firebaseUrl + 'users/');
 
+  // Set the scope with the users ref
   usersRef.on('value', function(snap) {
       var users = snap.val();
       $scope.zones = MapZones.getZones(users);
   });
 
+  // When something is changed update the scope
   usersRef.on('child_changed', function(snap) {
       var users = snap.val();
       usersRef.child(userId).on('value', function(snap) {
@@ -139,7 +123,7 @@ angular.module('mychat.controllers', [])
   
 })
 
-.controller('UnlockCtrl', function ($scope, Unlock, $state, $rootScope, $ionicModal) {
+.controller('UnlockCtrl', function ($scope, Unlock, $state, $rootScope, $ionicModal, Zones) {
 
   $scope.user = $rootScope.currUser;
 
@@ -167,10 +151,12 @@ angular.module('mychat.controllers', [])
   // Request permission from user to access location info.
   // This is needed on iOS 8.
   estimote.beacons.requestAlwaysAuthorization();
-
   // // RANGING FOR BEACONS
   estimote.beacons.startRangingBeaconsInRegion(
-    {}, // Empty region matches all beacons.
+    {
+      'identifier': 'UnlockRegion',
+      'uuid': '98F54863-C26C-F60F-C380-44B12D451FD7'
+    },
     function(beaconInfo) {
 
       //console.log('Ranging for beacons');
@@ -182,8 +168,7 @@ angular.module('mychat.controllers', [])
 
         $scope.unlockData = {
           doorStatus : 'Door Locked',
-          directions : 'Go to mod to unlock the door.',
-          image: 'locked.svg'
+          directions : 'Go to mod to unlock the door.'
         };
         $scope.$apply();
 
@@ -192,17 +177,24 @@ angular.module('mychat.controllers', [])
         // Stop Ranging for Beacons
         Unlock.stopRangingBeacons();
 
+        // START SCANNING AND SET THE ZONE FOR THIS USER
+        Zones.scan($rootScope.userRef);
+
         $scope.unlockData = {
           doorStatus : 'Unlocked',
-          directions : 'The door has been unlocked go inside and make yourself a sandwich.',
-          image: 'unlocked.svg'
+          directions : 'You are checked into mod.'
         };
-        
+
+        // Unlock the user and set the time that they checked in
         $rootScope.userRef.child('unlocked').set(true);
+        $rootScope.userRef.child('lastSeen').set(Date.now());
+
+        // Set the location count
         $rootScope.userRef.child('locationCount').once('value', function(snap) {
           var locationcount = snap.val();
-          console.log('locationCount', ++locationcount);
-          $rootScope.userRef.child('locationCount').set(locationcount++);
+          ++locationcount;
+          $rootScope.userRef.child('locationCount').set(locationcount);
+          $scope.user.locationCount = locationcount;
           $scope.$apply();
         });
 
@@ -211,38 +203,21 @@ angular.module('mychat.controllers', [])
       } else {
         $scope.unlockData = {
           doorStatus : 'Door Locked',
-          directions : 'Place your phone on the beacon to unlock.',
-          image: 'locked.svg'
+          directions : 'Place your phone on the beacon to unlock.'
         };
         $scope.$apply();
-
         console.log('Beacons in range but not the door beacon.');
       }
 
     },
-
     Unlock.onError );
-
 })
 
 .controller('UsersCtrl', function ($scope, Users, $state) {
-  //console.log("Rooms Controller initialized");
+  //console.log("Users Controller initialized");
   $scope.users = Users.all();
-
 })
 
 .controller('UserDetailCtrl', function($scope, $stateParams, Users, Unlock) {
-
   $scope.user = Users.get($stateParams.userId);
-
 });
-
-function guid() {
-  function s4() {
-    return Math.floor((1 + Math.random()) * 0x10000)
-      .toString(16)
-      .substring(1);
-  }
-  return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
-    s4() + '-' + s4() + s4() + s4();
-}
