@@ -85,7 +85,7 @@ angular.module('mychat.controllers', [])
               if (val.unlocked) {
                 $state.go('tab.map');  
               } else {
-                $state.go('unlock');  
+                $state.go('unlock');
               }
 
               $ionicLoading.hide();
@@ -125,6 +125,9 @@ angular.module('mychat.controllers', [])
 
 .controller('UnlockCtrl', function ($scope, Unlock, $state, $rootScope, $ionicModal, Zones) {
 
+  var unlocked = null;
+  $('.loader').removeClass('animate');
+
   $scope.user = $rootScope.currUser;
 
   $ionicModal.fromTemplateUrl('templates/welcome.html', {
@@ -135,7 +138,7 @@ angular.module('mychat.controllers', [])
 
   $scope.continue = function() {
     $scope.modal.hide();
-    $state.go('tab.users');
+    $state.go('tab.map');
   }
 
   $scope.unlockit = function() {
@@ -143,14 +146,8 @@ angular.module('mychat.controllers', [])
   }
 
   // The Default data
-  $scope.unlockData = {
-    doorStatus : 'Door Locked',
-    directions : 'Go to mod to unlock the door'
-  };
-
-  // Request permission from user to access location info.
-  // This is needed on iOS 8.
-  estimote.beacons.requestAlwaysAuthorization();
+  $scope.unlockData = Unlock.dataNotAtMod;
+  
   // // RANGING FOR BEACONS
   estimote.beacons.startRangingBeaconsInRegion(
     {
@@ -160,30 +157,21 @@ angular.module('mychat.controllers', [])
     function(beaconInfo) {
 
       //console.log('Ranging for beacons');
+      unlocked = Unlock.onRange(beaconInfo);
 
-      var unlocked = Unlock.onRange(beaconInfo);
-      console.log('Unlocked?: ', unlocked);
+      if (unlocked === 'notInRange') { // show that you are not at mod
+        $scope.unlockData = Unlock.dataNotAtMod;
+      } else if (unlocked) { // 
 
-      if (unlocked === 'notInRange') {
-
-        $scope.unlockData = {
-          doorStatus : 'Door Locked',
-          directions : 'Go to mod to unlock the door.'
-        };
-        $scope.$apply();
-
-      } else if (unlocked) {
+        console.log('UNLOCKED!!!!!!');
 
         // Stop Ranging for Beacons
         Unlock.stopRangingBeacons();
 
         // START SCANNING AND SET THE ZONE FOR THIS USER
-        Zones.scan($rootScope.userRef);
+        Zones.scan($rootScope.userRef, $state);
 
-        $scope.unlockData = {
-          doorStatus : 'Unlocked',
-          directions : 'You are checked into mod.'
-        };
+        $scope.unlockData = Unlock.dataDoorUnlocked;
 
         // Unlock the user and set the time that they checked in
         $rootScope.userRef.child('unlocked').set(true);
@@ -201,13 +189,11 @@ angular.module('mychat.controllers', [])
         Unlock.unlockAnimation(function(){$scope.modal.show();});
 
       } else {
-        $scope.unlockData = {
-          doorStatus : 'Door Locked',
-          directions : 'Place your phone on the beacon to unlock.'
-        };
-        $scope.$apply();
+        $scope.unlockData = Unlock.dataDoorLocked;
         console.log('Beacons in range but not the door beacon.');
       }
+
+      $scope.$apply();
 
     },
     Unlock.onError );

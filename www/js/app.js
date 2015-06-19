@@ -40,6 +40,10 @@ angular.module('mychat', [
       }
     }, 300);
 
+    // Request permission from user to access location info.
+    // This is needed on iOS 8.
+    estimote.beacons.requestAlwaysAuthorization();
+
     // To Resolve Bug
     ionic.Platform.fullScreen();
 
@@ -109,7 +113,6 @@ angular.module('mychat', [
 
   // State to represent Login View
   .state('login', {
-      cache: false,
       url: "/login",
       templateUrl: "templates/login.html",
       controller: 'LoginCtrl',
@@ -126,6 +129,8 @@ angular.module('mychat', [
 
   .state('unlock', {
       url: '/unlock',
+      abstract: true,
+      cache: false,
       templateUrl: "templates/tab-unlock.html",
       controller: 'UnlockCtrl'
   })
@@ -157,20 +162,20 @@ angular.module('mychat', [
     }
   })
 
-  .state('tab.users', {
-    url: '/users',
-    views: {
-      'tab-users': {
-        templateUrl: 'templates/tab-users.html',
-        controller: 'UsersCtrl'
-      }
-    }
-  })
+  // .state('tab.users', {
+  //   url: '/users',
+  //   views: {
+  //     'tab-users': {
+  //       templateUrl: 'templates/tab-users.html',
+  //       controller: 'UsersCtrl'
+  //     }
+  //   }
+  // })
 
   .state('tab.user-detail', {
-    url: '/users/:userId',
+    url: '/map/:userId',
     views: {
-      'tab-users': {
+      'tab-map': {
         templateUrl: 'templates/user-detail.html',
         controller: 'UserDetailCtrl'
       }

@@ -17,9 +17,8 @@
   <preference name="SplashScreen" value="screen"/>
   <preference name="SplashScreenDelay" value="3000"/>
   <preference name="StatusBarOverlaysWebview" value="false"/>
-  <feature name="StatusBar">
-    <param name="ios-package" value="CDVStatusBar" onload="true"/>
-  </feature>
+  <preference name="StatusBarBackgroundColor" value="#000000" />
+  <preference name="StatusBarStyle" value="lightcontent" />
   <platform name="ios">
     <splash src="resources/ios/splash/Default-568h@2x~iphone.png" height="1136" width="640"/>
     <splash src="resources/ios/splash/Default-667h.png" height="1334" width="750"/>
